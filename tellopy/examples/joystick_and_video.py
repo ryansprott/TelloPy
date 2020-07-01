@@ -301,7 +301,7 @@ new_image = None
 flight_data = None
 log_data = None
 buttons = None
-speed = 100
+speed = 30
 throttle = 0.0
 yaw = 0.0
 pitch = 0.0
@@ -314,7 +314,7 @@ def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
         if prev_flight_data != str(data):
-            print(data)
+            # print(data)
             prev_flight_data = str(data)
         flight_data = data
     elif event is drone.EVENT_LOG_DATA:
