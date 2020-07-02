@@ -222,6 +222,7 @@ class FlightData(object):
             (" | SPD: %2d" % self.ground_speed) +
             (" | BAT: %2d" % self.battery_percentage) +
             (" | WIFI: %2d" % self.wifi_strength) +
+            (" | TIME: %2d" % self.drone_fly_time_left) +
             (" | CAM: %2d" % self.camera_state) +
             (" | MODE: %2d" % self.fly_mode) +
             # (", drone_battery_left=0x%04x" % self.drone_battery_left) +
@@ -360,6 +361,7 @@ class LogNewMvoFeedback(object):
         self.pos_x = 0.0
         self.pos_y = 0.0
         self.pos_z = 0.0
+        self.height = 0.0
         if (data != None):
             self.update(data, count)
 
@@ -367,18 +369,21 @@ class LogNewMvoFeedback(object):
         return (
             ("VEL: %5.2f %5.2f %5.2f" % (self.vel_x, self.vel_y, self.vel_z))+
             (" POS: %5.2f %5.2f %5.2f" % (self.pos_x, self.pos_y, self.pos_z))+
+            (" HEIGHT: %5.2f" % (self.height))+
             "")
 
     def format_cvs(self):
         return (
             ("%f,%f,%f" % (self.vel_x, self.vel_y, self.vel_z))+
             (",%f,%f,%f" % (self.pos_x, self.pos_y, self.pos_z))+
+            (",%f" % (self.height))+
             "")
 
     def format_cvs_header(self):
         return (
-            "mvo.vel_x,mvo.vel_y,mvo.vel_z" + 
+            "mvo.vel_x,mvo.vel_y,mvo.vel_z" +
             ",mvo.pos_x,mvo.pos_y,mvo.pos_z" +
+            ",height"
             "")
 
     def update(self, data, count = 0):
@@ -389,6 +394,7 @@ class LogNewMvoFeedback(object):
         self.vel_y /= 100.0
         self.vel_z /= 100.0
         (self.pos_x, self.pos_y, self.pos_z) = struct.unpack_from('fff', data, 8)
+        (self.height) = struct.unpack_from('f', data, 68)
         self.log.debug('LogNewMvoFeedback: ' + str(self))
 
 
@@ -396,12 +402,14 @@ class LogImuAtti(object):
     def __init__(self, log = None, data = None):
         self.log = log
         self.count = 0
+        self.alti = 0.0
         self.acc_x = 0.0
         self.acc_y = 0.0
         self.acc_z = 0.0
         self.gyro_x = 0.0
         self.gyro_y = 0.0
         self.gyro_z = 0.0
+        self.press = 0.0
         self.q0 = 0.0
         self.q1 = 0.0
         self.q2 = 0.0
@@ -409,6 +417,12 @@ class LogImuAtti(object):
         self.vg_x = 0.0
         self.vg_y = 0.0
         self.vg_z = 0.0
+        self.ag_x = 0.0
+        self.ag_y = 0.0
+        self.ag_z = 0.0
+        self.gb_x = 0.0
+        self.gb_y = 0.0
+        self.gb_z = 0.0
         if (data != None):
             self.update(data)
 
@@ -416,31 +430,47 @@ class LogImuAtti(object):
         return (
             ("ACC: %5.2f %5.2f %5.2f" % (self.acc_x, self.acc_y, self.acc_z)) +
             (" GYRO: %5.2f %5.2f %5.2f" % (self.gyro_x, self.gyro_y, self.gyro_z)) +
-            (" QUATERNION: %5.2f %5.2f %5.2f %5.2f" % (self.q0, self.q1, self.q2, self.q3)) +
+            (" PRESS: %5.2f" % (self.press)) +
+            (" ALTI: %5.2f" % (self.alti)) +
+            (" QUAT: %5.2f %5.2f %5.2f %5.2f" % (self.q0, self.q1, self.q2, self.q3)) +
             (" VG: %5.2f %5.2f %5.2f" % (self.vg_x, self.vg_y, self.vg_z)) +
+            (" AG: %5.2f %5.2f %5.2f" % (self.ag_x, self.ag_y, self.ag_z)) +
+            (" GB: %5.2f %5.2f %5.2f" % (self.gb_x, self.gb_y, self.gb_z)) +
             "")
 
     def format_cvs(self):
         return (
-            ("%f,%f,%f" % (self.acc_x, self.acc_y, self.acc_z)) +
+            ("%f" % (self.alti)) +
+            (",%f,%f,%f" % (self.acc_x, self.acc_y, self.acc_z)) +
             (",%f,%f,%f" % (self.gyro_x, self.gyro_y, self.gyro_z)) +
+            (",%f" % (self.press)) +
             (",%f,%f,%f,%f" % (self.q0, self.q1, self.q2, self.q3)) +
+            (",%f,%f,%f" % (self.ag_x, self.ag_y, self.ag_z)) +
             (",%f,%f,%f" % (self.vg_x, self.vg_y, self.vg_z)) +
+            (",%f,%f,%f" % (self.gb_x, self.gb_y, self.gb_z)) +
             "")
 
     def format_cvs_header(self):
         return (
-            "imu.acc_x,imu.acc_y,imu.acc_z" +
+            "imu.alti" +
+            ",imu.acc_x,imu.acc_y,imu.acc_z" +
             ",imu.gyro_x,imu.gyro_y,imu.gyro_z" +
+            ",imu.press" +
             ",imu.q0,imu.q1,imu.q2, self.q3" +
+            ",imu.ag_x,imu.ag_y,imu.ag_z" +
             ",imu.vg_x,imu.vg_y,imu.vg_z" +
+            ",imu.gb_x,imu.gb_y,imu.gb_z" +
             "")
 
     def update(self, data, count = 0):
         self.log.debug('LogImuAtti: length=%d %s' % (len(data), byte_to_hexstring(data)))
         self.count = count
+        (self.alti) = struct.unpack_from('f', data, 16)
         (self.acc_x, self.acc_y, self.acc_z) = struct.unpack_from('fff', data, 20)
         (self.gyro_x, self.gyro_y, self.gyro_z) = struct.unpack_from('fff', data, 32)
+        (self.press) = struct.unpack_from('f', data, 44)
         (self.q0, self.q1, self.q2, self.q3) = struct.unpack_from('ffff', data, 48)
+        (self.ag_x, self.ag_y, self.ag_z) = struct.unpack_from('fff', data, 64)
         (self.vg_x, self.vg_y, self.vg_z) = struct.unpack_from('fff', data, 76)
+        (self.gb_x, self.gb_y, self.gb_z) = struct.unpack_from('fff', data, 88)
         self.log.debug('LogImuAtti: ' + str(self))

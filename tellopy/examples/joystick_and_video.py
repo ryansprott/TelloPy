@@ -9,7 +9,7 @@ tellopy sample using joystick and video palyer
 
 import time
 import sys
-import tellopy
+from .._internal import tello as tellopy
 import pygame
 import pygame.locals
 from subprocess import Popen, PIPE
@@ -454,11 +454,12 @@ def recv_thread(drone):
                 image = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
 
                 if flight_data:
-                    draw_text(image, 'TelloPy: joystick_and_video ' + str(flight_data), 0)
+                    draw_text(image, 'Flight data ' + str(flight_data), 0)
                 if log_data:
-                    draw_text(image, 'MVO: ' + str(log_data.mvo), -3)
-                    draw_text(image, ('IMU: ' + str(log_data.imu))[0:52], -2)
-                    draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[52:], -1)
+                    draw_text(image, 'MVO: ' + str(log_data.mvo), -4)
+                    draw_text(image, ('IMU: ' + str(log_data.imu))[0:52], -3)
+                    draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[52:107], -2)
+                    draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[107:], -1)
                 new_image = image
                 if frame.time_base < 1.0/60:
                     time_base = 1.0/60
@@ -509,6 +510,7 @@ def main():
         return
 
     drone = tellopy.Tello()
+    drone.record_log_data()
     drone.connect()
     drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
     drone.subscribe(drone.EVENT_LOG_DATA, handler)
