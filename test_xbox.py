@@ -61,10 +61,13 @@ while not done:
         if event.type == pygame.QUIT: # If user clicked close.
             done = True # Flag that we are done so we exit this loop.
         elif event.type == pygame.JOYBUTTONDOWN:
-            print("Joystick button pressed.")
+            print("Joystick button " + str(event.button) + " pressed.")
         elif event.type == pygame.JOYBUTTONUP:
-            print("Joystick button released.")
-
+            print("Joystick button " + str(event.button) + " released.")
+        elif event.type == pygame.JOYAXISMOTION:
+            print("Motion on axis " + str(event.axis) + " " + str(event.value))
+        elif event.type == pygame.JOYHATMOTION:
+            print("Hat motion on axis " + str(event.hat) + " " + str(event.value))
     #
     # DRAWING STEP
     #
