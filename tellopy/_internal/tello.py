@@ -835,7 +835,7 @@ class Tello(object):
                 self.video_data_size += len(data)
                 dur = (now - self.prev_video_data_time).total_seconds()
                 if 2.0 < dur:
-                    log.info(('video data %d bytes %5.1fKB/sec' %
+                    log.debug(('video data %d bytes %5.1fKB/sec' %
                               (self.video_data_size, self.video_data_size / dur / 1024)) +
                              ((' loss=%d' % self.video_data_loss) if self.video_data_loss != 0 else ''))
                     self.video_data_size = 0

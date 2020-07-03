@@ -15,6 +15,8 @@ import pygame.locals
 from subprocess import Popen, PIPE
 import threading
 import av
+import os
+import datetime
 import cv2.cv2 as cv2  # for avoidance of pylint error
 import numpy
 import time
@@ -157,16 +159,16 @@ class JoystickDualAction:
     # bumper triggers
     LAND = 4  # L1
     TAKEOFF = 5  # R1
-    # UNUSED = 6 #L2
-    # UNUSED = 7 #R2
+    PANO = 6 #L2
+    TAKE_PICTURE = 7 #R2
 
     # buttons
     LEFT = 0  # X
     BACKWARD = 1  # A
     RIGHT = 2  # B
     FORWARD = 3  # Y
-    # UNUSED = 8 #BACK
-    # UNUSED = 9 #START
+    SPEED_DOWN = 8 #BACK
+    SPEED_UP = 9 #START
     # UNUSED = 10 #L_JOY
     # UNUSED = 11 #R_JOY
 
@@ -309,7 +311,7 @@ new_image = None
 flight_data = None
 log_data = None
 buttons = None
-speed = 30
+speed = 20
 throttle = 0.0
 yaw = 0.0
 pitch = 0.0
@@ -338,6 +340,15 @@ def update(old, new, max_delta=0.3):
         res = 0.0
     return res
 
+def handle_file_received(event, sender, data):
+    global date_fmt
+    # Create a file in ~/Pictures/ to receive image data from the drone.
+    path = '%s/Pictures/tello-%s.jpeg' % (
+        os.getenv('HOME'),
+        datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S'))
+    with open(path, 'wb') as fd:
+        fd.write(data)
+    print('Saved photo to %s' % path)
 
 def handle_input_event(drone, e):
     global speed
@@ -394,6 +405,9 @@ def handle_input_event(drone, e):
             drone.right(speed)
         elif e.button == buttons.LEFT:
             drone.left(speed)
+        elif e.button == buttons.PANO:
+            drone.clockwise(10)
+
     elif e.type == pygame.locals.JOYBUTTONUP:
         if e.button == buttons.TAKEOFF:
             if throttle != 0.0:
@@ -417,6 +431,18 @@ def handle_input_event(drone, e):
             drone.right(0)
         elif e.button == buttons.LEFT:
             drone.left(0)
+        elif e.button == buttons.PANO:
+            drone.clockwise(0)
+        elif e.button == buttons.TAKE_PICTURE:
+            drone.take_picture()
+        elif e.button == buttons.SPEED_UP:
+            if speed <= 90:
+                speed += 5
+            print("speed up to " + str(speed))
+        elif e.button == buttons.SPEED_DOWN:
+            if speed > 5:
+                speed -= 5
+            print("speed down to " + str(speed))
 
 def draw_text(image, text, row):
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -514,6 +540,8 @@ def main():
     drone.connect()
     drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
     drone.subscribe(drone.EVENT_LOG_DATA, handler)
+    drone.subscribe(drone.EVENT_FILE_RECEIVED, handle_file_received)
+
     threading.Thread(target=recv_thread, args=[drone]).start()
 
     try:
