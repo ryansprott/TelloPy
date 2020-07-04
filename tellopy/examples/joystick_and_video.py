@@ -472,26 +472,32 @@ def recv_thread(drone):
         # skip first 300 frames
         frame_skip = 300
         while True:
-            for frame in container.decode(video=0):
-                if 0 < frame_skip:
-                    frame_skip = frame_skip - 1
-                    continue
-                start_time = time.time()
-                image = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
+            try:
+                for frame in container.decode(video=0):
+                    if 0 < frame_skip:
+                        frame_skip = frame_skip - 1
+                        continue
+                    start_time = time.time()
+                    image = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
 
-                if flight_data:
-                    draw_text(image, 'Flight data ' + str(flight_data), 0)
-                if log_data:
-                    draw_text(image, 'MVO: ' + str(log_data.mvo), -4)
-                    draw_text(image, ('IMU: ' + str(log_data.imu))[0:52], -3)
-                    draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[52:107], -2)
-                    draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[107:], -1)
-                new_image = image
-                if frame.time_base < 1.0/60:
-                    time_base = 1.0/60
-                else:
-                    time_base = frame.time_base
-                frame_skip = int((time.time() - start_time)/time_base)
+                    if flight_data:
+                        draw_text(image, 'Flight data ' + str(flight_data), 0)
+                    if log_data:
+                        draw_text(image, 'MVO: ' + str(log_data.mvo), -4)
+                        draw_text(image, ('IMU: ' + str(log_data.imu))[0:52], -3)
+                        draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[52:107], -2)
+                        draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[107:], -1)
+                    new_image = image
+                    if frame.time_base < 1.0/60:
+                        time_base = 1.0/60
+                    else:
+                        time_base = frame.time_base
+                    frame_skip = int((time.time() - start_time)/time_base)
+            except Exception as ex:
+                print(ex)
+                time.sleep(0.5)
+                continue
+
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback.print_exception(exc_type, exc_value, exc_traceback)

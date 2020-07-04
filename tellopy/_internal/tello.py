@@ -720,6 +720,9 @@ class Tello(object):
                 self.__send_conn_req()
             elif event == self.__EVENT_QUIT_REQ:
                 self.state = self.STATE_QUIT
+            elif event == self.EVENT_FLIGHT_DATA or event == self.EVENT_LOG_DATA:
+                # try to force reconnection
+                self.__send_conn_req()
 
         elif self.state == self.STATE_CONNECTED:
             if event == self.__EVENT_TIMEOUT:
