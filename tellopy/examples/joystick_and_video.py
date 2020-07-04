@@ -53,7 +53,6 @@ class JoystickPS3:
     RIGHT_Y_REVERSE = -1.0
     DEADZONE = 0.1
 
-
 class JoystickPS4:
     # d-pad
     UP = -1  # UP
@@ -83,7 +82,6 @@ class JoystickPS4:
     RIGHT_X_REVERSE = 1.0
     RIGHT_Y_REVERSE = -1.0
     DEADZONE = 0.08
-
 
 class JoystickPS4ALT:
     # d-pad
@@ -273,7 +271,6 @@ class JoystickXONES_WIRELESS:
     RIGHT_Y_REVERSE = -1.0
     DEADZONE = 0.09
 
-
 class JoystickTARANIS:
     # d-pad
     UP = -1  # UP
@@ -304,7 +301,6 @@ class JoystickTARANIS:
     RIGHT_Y_REVERSE = 1.0
     DEADZONE = 0.01
 
-
 prev_flight_data = None
 run_recv_thread = True
 new_image = None
@@ -331,7 +327,6 @@ def handler(event, sender, data, **args):
         log_data = data
     else:
         print('event="%s" data=%s' % (event.getname(), str(data)))
-
 
 def update(old, new, max_delta=0.3):
     if abs(old - new) <= max_delta:
@@ -407,7 +402,6 @@ def handle_input_event(drone, e):
             drone.left(speed)
         elif e.button == buttons.PANO:
             drone.clockwise(10)
-
     elif e.type == pygame.locals.JOYBUTTONUP:
         if e.button == buttons.TAKEOFF:
             if throttle != 0.0:
@@ -493,15 +487,15 @@ def recv_thread(drone):
                     else:
                         time_base = frame.time_base
                     frame_skip = int((time.time() - start_time)/time_base)
-            except Exception as ex:
-                print(ex)
-                time.sleep(0.5)
+            except av.AVError as ex:
+                container = av.open(drone.get_video_stream())
+                print("resetting container. exception while decoding! " + ex)
                 continue
 
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback.print_exception(exc_type, exc_value, exc_traceback)
-        print(ex)
+        print("exception in recv thread!" + ex)
 
 def main():
     global buttons
