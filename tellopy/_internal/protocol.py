@@ -1,5 +1,6 @@
 import datetime
 import struct
+import math
 from io import BytesIO
 
 from . import crc
@@ -414,6 +415,7 @@ class LogImuAtti(object):
         self.q1 = 0.0
         self.q2 = 0.0
         self.q3 = 0.0
+        self.yaw = 0.0
         self.vg_x = 0.0
         self.vg_y = 0.0
         self.vg_z = 0.0
@@ -428,14 +430,8 @@ class LogImuAtti(object):
 
     def __str__(self):
         return (
-            ("ACC: %5.2f %5.2f %5.2f" % (self.acc_x, self.acc_y, self.acc_z)) +
-            (" GYRO: %5.2f %5.2f %5.2f" % (self.gyro_x, self.gyro_y, self.gyro_z)) +
-            (" PRESS: %5.2f" % (self.press)) +
-            (" ALTI: %5.2f" % (self.alti)) +
-            (" QUAT: %5.2f %5.2f %5.2f %5.2f" % (self.q0, self.q1, self.q2, self.q3)) +
-            (" VG: %5.2f %5.2f %5.2f" % (self.vg_x, self.vg_y, self.vg_z)) +
-            (" AG: %5.2f %5.2f %5.2f" % (self.ag_x, self.ag_y, self.ag_z)) +
-            (" GB: %5.2f %5.2f %5.2f" % (self.gb_x, self.gb_y, self.gb_z)) +
+            ("ALT: %5.2f" % (self.alti)) +
+            (" YAW: %5.2f" % (self.yaw)) +
             "")
 
     def format_cvs(self):
@@ -462,6 +458,13 @@ class LogImuAtti(object):
             ",imu.gb_x,imu.gb_y,imu.gb_z" +
             "")
 
+    def quaternion_to_yaw_degree(self, qw, qx, qy, qz):
+        degree = math.pi / 180.0
+        sin_y = 2.0 * (qw * qz + qx * qy)
+        cos_y = 1.0 - 2 * (qy * qy + qz * qz)
+        yaw = round(math.atan2(sin_y, cos_y) / degree, 2)
+        return yaw
+
     def update(self, data, count = 0):
         self.log.debug('LogImuAtti: length=%d %s' % (len(data), byte_to_hexstring(data)))
         self.count = count
@@ -473,4 +476,5 @@ class LogImuAtti(object):
         (self.ag_x, self.ag_y, self.ag_z) = struct.unpack_from('fff', data, 64)
         (self.vg_x, self.vg_y, self.vg_z) = struct.unpack_from('fff', data, 76)
         (self.gb_x, self.gb_y, self.gb_z) = struct.unpack_from('fff', data, 88)
+        self.yaw = self.quaternion_to_yaw_degree(self.q0, self.q1, self.q2, self.q3)
         self.log.debug('LogImuAtti: ' + str(self))

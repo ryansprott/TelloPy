@@ -477,10 +477,8 @@ def recv_thread(drone):
                     if flight_data:
                         draw_text(image, 'Flight data ' + str(flight_data), 0)
                     if log_data:
-                        draw_text(image, 'MVO: ' + str(log_data.mvo), -4)
-                        draw_text(image, ('IMU: ' + str(log_data.imu))[0:52], -3)
-                        draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[52:107], -2)
-                        draw_text(image, '     ' + ('IMU: ' + str(log_data.imu))[107:], -1)
+                        draw_text(image, 'MVO: ' + str(log_data.mvo), -2)
+                        draw_text(image, 'IMU: ' + str(log_data.imu), -1)
                     new_image = image
                     if frame.time_base < 1.0/60:
                         time_base = 1.0/60
