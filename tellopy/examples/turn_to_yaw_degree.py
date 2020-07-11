@@ -29,7 +29,9 @@ def test():
         sleep(2)
 
         target_yaw = 0.0
-        yaws = [0.0, 45.0, 90.0, 135.0, -179.0, -135.0, -90.0, -45.0, 0.0]
+        # yaws = [0.0, 45.0, 90.0, 135.0, -179.0, -135.0, -90.0, -45.0]
+        yaws = [0.0, 135.0, -135.0, -45.0]
+
         while True:
             current_yaw = drone.log_data.imu.yaw
 
@@ -45,18 +47,21 @@ def test():
 
             direction = ""
 
+            speed = (abs(delta) / 180.0) * 100.0
+            adj_spd = speed if speed >= 10.0 else 10.0
+
             if (delta > 10.0):
                 direction = "fast CW "
-                drone.clockwise(60)
+                drone.clockwise(adj_spd * 2.0)
             elif (delta > 0.0):
                 direction = "slow CW "
-                drone.clockwise(10)
+                drone.clockwise(adj_spd)
             elif (delta < -10.0):
                 direction = "fast CCW "
-                drone.counter_clockwise(60)
+                drone.counter_clockwise(adj_spd * 2.0)
             elif (delta < 0.0):
                 direction = "slow CCW "
-                drone.counter_clockwise(10)
+                drone.counter_clockwise(adj_spd)
 
             print(direction + str(delta) + " from " + str(adj_current) + " to " + str(adj_target))
 
@@ -64,12 +69,12 @@ def test():
                 # close enough for government work!
                 print("done!")
                 drone.clockwise(0)
-                sleep(1) # stabilize
-                drone.take_picture()
-                sleep(4)
+                sleep(0.5) # stabilize?
+                # drone.take_picture()
+                # sleep(4)
                 target_yaw = yaws.pop()
 
-            if (len(yaws) == 0):
+            if (len(yaws) < 0):
                 break
 
             sleep(0.1)
