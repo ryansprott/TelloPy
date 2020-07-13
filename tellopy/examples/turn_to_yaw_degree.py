@@ -4,6 +4,32 @@ import os
 import datetime
 import math
 
+class Waypoint:
+    def __init__(self, tgt_w, tgt_x, tgt_y, tgt_z):
+        self.tgt_w = tgt_w
+        self.dw = 0.0
+        self.tgt_x = tgt_x
+        self.tgt_y = tgt_y
+        self.tgt_z = tgt_z
+
+    def get_yaw_delta(self, cur_w):
+        adj_current = 360.0 + cur_w if cur_w < 0.0 else cur_w
+        adj_target  = 360.0 + self.tgt_w if self.tgt_w < 0.0 else self.tgt_w
+
+        self.dw = round(adj_target - adj_current, 2)
+
+        if (abs(self.dw) >= 180.0 and self.dw > 0.0):
+            self.dw -= 360.0
+        elif (abs(self.dw) >= 180.0 and self.dw < 0.0):
+            self.dw += 360.0
+
+        return round(self.dw, 2)
+
+    def get_yaw_speed(self):
+        speed = (abs(self.dw) / 180.0) * 100.0
+        adj_spd = speed if speed >= 10.0 else 10.0
+        return round(adj_spd, 2)
+
 def handler(event, sender, data, **args):
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
@@ -26,55 +52,45 @@ def test():
         drone.connect()
         drone.wait_for_connection(60.0)
         drone.takeoff()
-        sleep(2)
+        sleep(5)
 
-        target_yaw = 0.0
-        # yaws = [0.0, 45.0, 90.0, 135.0, -179.0, -135.0, -90.0, -45.0]
-        yaws = [0.0, 135.0, -135.0, -45.0]
+        offset_x = round(drone.log_data.mvo.pos_x * 100.0, 2)
+        offset_y = round(drone.log_data.mvo.pos_y * 100.0, 2)
+        offset_z = round(drone.log_data.mvo.pos_z * 100.0, 2)
+        print(offset_x, offset_y, offset_z)
+
+        waypoints = [
+            Waypoint(180.0, 0.0, 0.0, 0.0),
+            Waypoint(135.0, 0.0, 0.0, 0.0),
+            Waypoint(90.0, 0.0, 0.0, 0.0),
+            Waypoint(45.0, 0.0, 0.0, 0.0),
+            Waypoint(0.0, 0.0, 0.0, 0.0),
+        ]
+
+        wp = waypoints.pop()
 
         while True:
-            current_yaw = drone.log_data.imu.yaw
-
-            adj_current = 360.0 + current_yaw if current_yaw < 0.0 else current_yaw
-            adj_target  = 360.0 + target_yaw if target_yaw < 0.0 else target_yaw
-
-            delta = round(adj_target - adj_current, 2)
-
-            if (abs(delta) >= 180.0 and delta > 0.0):
-                delta -= 360.0
-            elif (abs(delta) >= 180.0 and delta < 0.0):
-                delta += 360.0
-
             direction = ""
+            current_yaw = drone.log_data.imu.yaw
+            yaw_delta = wp.get_yaw_delta(current_yaw)
+            yaw_speed = wp.get_yaw_speed()
 
-            speed = (abs(delta) / 180.0) * 100.0
-            adj_spd = speed if speed >= 10.0 else 10.0
+            if (yaw_delta > 0.0):
+                direction = "turning CW, delta "
+                drone.clockwise(yaw_speed)
+            elif (yaw_delta < 0.0):
+                direction = "turning CCW, delta "
+                drone.counter_clockwise(yaw_speed)
 
-            if (delta > 10.0):
-                direction = "fast CW "
-                drone.clockwise(adj_spd * 2.0)
-            elif (delta > 0.0):
-                direction = "slow CW "
-                drone.clockwise(adj_spd)
-            elif (delta < -10.0):
-                direction = "fast CCW "
-                drone.counter_clockwise(adj_spd * 2.0)
-            elif (delta < 0.0):
-                direction = "slow CCW "
-                drone.counter_clockwise(adj_spd)
+            print(direction + str(yaw_delta) + " at " + str(yaw_speed) + " cm/s from " + str(current_yaw) + " to " + str(wp.tgt_w))
 
-            print(direction + str(delta) + " from " + str(adj_current) + " to " + str(adj_target))
-
-            if (math.isclose(0.0, delta, abs_tol=1.0)):
+            if (math.isclose(0.0, yaw_delta, abs_tol=1.0)):
                 # close enough for government work!
                 print("done!")
                 drone.clockwise(0)
-                sleep(0.5) # stabilize?
-                # drone.take_picture()
-                # sleep(4)
-                target_yaw = yaws.pop()
+                wp = waypoints.pop()
 
-            if (len(yaws) < 0):
+            if (len(waypoints) == 0):
                 break
 
             sleep(0.1)
