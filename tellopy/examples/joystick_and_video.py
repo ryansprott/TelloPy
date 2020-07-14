@@ -313,6 +313,9 @@ yaw = 0.0
 pitch = 0.0
 roll = 0.0
 
+offset_x = 0.0
+offset_y = 0.0
+
 def handler(event, sender, data, **args):
     global prev_flight_data
     global flight_data
@@ -351,6 +354,8 @@ def handle_input_event(drone, e):
     global yaw
     global pitch
     global roll
+    global offset_x
+    global offset_y
     if e.type == pygame.locals.JOYAXISMOTION:
         # ignore small input values (Deadzone)
         if -buttons.DEADZONE <= e.value and e.value <= buttons.DEADZONE:
@@ -428,7 +433,9 @@ def handle_input_event(drone, e):
         elif e.button == buttons.PANO:
             drone.clockwise(0)
         elif e.button == buttons.TAKE_PICTURE:
-            drone.take_picture()
+            # drone.take_picture()
+            offset_x = drone.log_data.mvo.pos_x
+            offset_y = drone.log_data.mvo.pos_y
         elif e.button == buttons.SPEED_UP:
             if speed <= 90:
                 speed += 5
@@ -477,6 +484,7 @@ def recv_thread(drone):
                     if flight_data:
                         draw_text(image, 'Flight data ' + str(flight_data), 0)
                     if log_data:
+                        draw_text(image, 'DX: ' + str(round(drone.log_data.mvo.pos_x - offset_x, 2)) + ' DY: ' + str(round(drone.log_data.mvo.pos_y - offset_y, 2)), -3)
                         draw_text(image, 'MVO: ' + str(log_data.mvo), -2)
                         draw_text(image, 'IMU: ' + str(log_data.imu), -1)
                     new_image = image
