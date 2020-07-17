@@ -9,6 +9,7 @@ import threading
 import av
 import os
 import datetime
+import math
 import cv2.cv2 as cv2  # for avoidance of pylint error
 import numpy
 import traceback
@@ -24,10 +25,73 @@ throttle = 0.0
 yaw = 0.0
 pitch = 0.0
 roll = 0.0
+offset_x = 0.0
+offset_y = 0.0
 
 date_fmt = '%Y-%m-%d_%H%M%S'
 filename = '%s/Pictures/tello-%s.avi' % (os.getenv('HOME'), datetime.datetime.now().strftime(date_fmt))
 out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 25, (960, 720))
+
+class JoystickDualAction:
+    # d-pad
+    UP = -1  # UP
+    DOWN = -1  # DOWN
+    ROTATE_LEFT = -1  # LEFT
+    ROTATE_RIGHT = -1  # RIGHT
+
+    # bumper triggers
+    LAND = 4  # L1
+    TAKEOFF = 5  # R1
+    PANO = 6 #L2
+    TAKE_PICTURE = 7 #R2
+
+    # buttons
+    LEFT = 0  # X
+    BACKWARD = 1  # A
+    RIGHT = 2  # B
+    FORWARD = 3  # Y
+    SPEED_DOWN = 8 #BACK
+    SPEED_UP = 9 #START
+    # UNUSED = 10 #L_JOY
+    # UNUSED = 11 #R_JOY
+
+    # axis
+    LEFT_X = 0
+    LEFT_Y = 1
+    RIGHT_X = 2
+    RIGHT_Y = 3
+    LEFT_X_REVERSE = 1.0
+    LEFT_Y_REVERSE = -1.0
+    RIGHT_X_REVERSE = 1.0
+    RIGHT_Y_REVERSE = -1.0
+    DEADZONE = 0.08
+
+class Waypoint:
+    def __init__(self, tgt_x, tgt_y):
+        self.tgt_x = tgt_x
+        self.dx = 0.0
+        self.at_x = False
+
+        self.tgt_y = tgt_y
+        self.dy = 0.0
+        self.at_y = False
+
+    def get_dx_dy(self, cur_yaw, cur_x, cur_y):
+        adj_yaw = cur_yaw * (math.pi / 180.0)
+        self.dx = (math.cos(adj_yaw) * (self.tgt_x - cur_x)) - (math.sin(adj_yaw) * (self.tgt_y - cur_y))
+        self.dy = (math.sin(adj_yaw) * (self.tgt_x - cur_x)) + (math.cos(adj_yaw) * (self.tgt_y - cur_y))
+        return (round(self.dx, 2), round(self.dy, 2))
+
+    def get_dx(self, cur_x):
+        self.dx = self.tgt_x - cur_x
+        return self.dx
+
+    def get_dy(self, cur_y):
+        self.dy = self.tgt_y - cur_y
+        return self.dy
+
+    def arrived(self):
+        return self.at_x and self.at_y
 
 controls = {
     'w': 'forward',
@@ -52,6 +116,13 @@ controls = {
     'enter': lambda drone: drone.take_picture(),
     'return': lambda drone: drone.take_picture(),
 }
+
+def update(old, new, max_delta=0.3):
+    if abs(old - new) <= max_delta:
+        res = new
+    else:
+        res = 0.0
+    return res
 
 def handler(event, sender, data, **args):
     global prev_flight_data
@@ -84,6 +155,8 @@ def handle_input_event(drone, e):
     global yaw
     global pitch
     global roll
+    global offset_x
+    global offset_y
     if e.type == pygame.locals.KEYDOWN:
         keyname = pygame.key.name(e.key)
         print('+' + keyname)
@@ -110,6 +183,94 @@ def handle_input_event(drone, e):
                 getattr(drone, key_handler)(0)
             else:
                 key_handler(drone, 0)
+    elif e.type == pygame.locals.JOYAXISMOTION:
+        # ignore small input values (Deadzone)
+        if -buttons.DEADZONE <= e.value and e.value <= buttons.DEADZONE:
+            e.value = 0.0
+        if e.axis == buttons.LEFT_Y:
+            throttle = update(throttle, e.value * buttons.LEFT_Y_REVERSE)
+            drone.set_throttle(throttle)
+        if e.axis == buttons.LEFT_X:
+            yaw = update(yaw, e.value * buttons.LEFT_X_REVERSE)
+            drone.set_yaw(yaw)
+        if e.axis == buttons.RIGHT_Y:
+            pitch = update(pitch, e.value *
+                           buttons.RIGHT_Y_REVERSE)
+            drone.set_pitch(pitch)
+        if e.axis == buttons.RIGHT_X:
+            roll = update(roll, e.value * buttons.RIGHT_X_REVERSE)
+            drone.set_roll(roll)
+    elif e.type == pygame.locals.JOYHATMOTION:
+        if e.value[0] < 0:
+            drone.counter_clockwise(speed)
+        if e.value[0] == 0:
+            drone.clockwise(0)
+        if e.value[0] > 0:
+            drone.clockwise(speed)
+        if e.value[1] < 0:
+            drone.down(speed)
+        if e.value[1] == 0:
+            drone.up(0)
+        if e.value[1] > 0:
+            drone.up(speed)
+    elif e.type == pygame.locals.JOYBUTTONDOWN:
+        if e.button == buttons.LAND:
+            drone.land()
+        elif e.button == buttons.UP:
+            drone.up(speed)
+        elif e.button == buttons.DOWN:
+            drone.down(speed)
+        elif e.button == buttons.ROTATE_RIGHT:
+            drone.clockwise(speed)
+        elif e.button == buttons.ROTATE_LEFT:
+            drone.counter_clockwise(speed)
+        elif e.button == buttons.FORWARD:
+            drone.forward(speed)
+        elif e.button == buttons.BACKWARD:
+            drone.backward(speed)
+        elif e.button == buttons.RIGHT:
+            drone.right(speed)
+        elif e.button == buttons.LEFT:
+            drone.left(speed)
+        elif e.button == buttons.PANO:
+            drone.clockwise(10)
+    elif e.type == pygame.locals.JOYBUTTONUP:
+        if e.button == buttons.TAKEOFF:
+            if throttle != 0.0:
+                print('###')
+                print('### throttle != 0.0 (This may hinder the drone from taking off)')
+                print('###')
+            drone.takeoff()
+        elif e.button == buttons.UP:
+            drone.up(0)
+        elif e.button == buttons.DOWN:
+            drone.down(0)
+        elif e.button == buttons.ROTATE_RIGHT:
+            drone.clockwise(0)
+        elif e.button == buttons.ROTATE_LEFT:
+            drone.counter_clockwise(0)
+        elif e.button == buttons.FORWARD:
+            drone.forward(0)
+        elif e.button == buttons.BACKWARD:
+            drone.backward(0)
+        elif e.button == buttons.RIGHT:
+            drone.right(0)
+        elif e.button == buttons.LEFT:
+            drone.left(0)
+        elif e.button == buttons.PANO:
+            drone.clockwise(0)
+        elif e.button == buttons.TAKE_PICTURE:
+            # drone.take_picture()
+            offset_x = drone.log_data.mvo.pos_x
+            offset_y = drone.log_data.mvo.pos_y
+        elif e.button == buttons.SPEED_UP:
+            if speed <= 90:
+                speed += 5
+            print("speed up to " + str(speed))
+        elif e.button == buttons.SPEED_DOWN:
+            if speed > 5:
+                speed -= 5
+            print("speed down to " + str(speed))
 
 def draw_text(image, text, row):
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -175,9 +336,20 @@ def main():
     global buttons
     global run_recv_thread
     global new_image
+    global offset_x
+    global offset_y
     pygame.init()
+    pygame.joystick.init()
     current_image = None
 
+    try:
+        js = pygame.joystick.Joystick(0)
+        js.init()
+        buttons = JoystickDualAction
+    except pygame.error:
+        pass
+
+    wp = Waypoint(1.0, 1.0)
     drone = tellopy.Tello()
     drone.record_log_data()
     drone.connect()
@@ -190,6 +362,14 @@ def main():
     try:
         while True:
             pygame.time.delay(50)
+            current_yaw = drone.log_data.imu.yaw
+            adj_x = drone.log_data.mvo.pos_x - offset_x
+            adj_y = drone.log_data.mvo.pos_y - offset_y
+            dx = wp.get_dx(adj_x)
+            dy = wp.get_dy(adj_y)
+            # dx, dy = wp.get_dx_dy(current_yaw, adj_x, adj_y)
+            print(dx, dy)
+
             for e in pygame.event.get():
                 handle_input_event(drone, e)
             if current_image is not new_image:
