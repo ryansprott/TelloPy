@@ -161,6 +161,10 @@ def test():
 
             if (wp.arrived()):
                 print("arrived!")
+                drone.set_roll(0.0)
+                drone.set_pitch(0.0)
+                drone.set_yaw(0.0)
+                drone.set_throttle(0.0)
                 sleep(1.0)
                 if (len(waypoints) == 0):
                     break
