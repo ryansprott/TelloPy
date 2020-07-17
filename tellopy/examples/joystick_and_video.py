@@ -316,6 +316,10 @@ roll = 0.0
 offset_x = 0.0
 offset_y = 0.0
 
+date_fmt = '%Y-%m-%d_%H%M%S'
+filename = '%s/Pictures/tello-%s.avi' % (os.getenv('HOME'), datetime.datetime.now().strftime(date_fmt))
+out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 25, (960, 720))
+
 def handler(event, sender, data, **args):
     global prev_flight_data
     global flight_data
@@ -480,6 +484,7 @@ def recv_thread(drone):
                         continue
                     start_time = time.time()
                     image = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
+                    out.write(image)
 
                     if flight_data:
                         draw_text(image, 'Flight data ' + str(flight_data), 0)
@@ -568,6 +573,7 @@ def main():
         print(e)
 
     run_recv_thread = False
+    out.release()
     cv2.destroyAllWindows()
     drone.quit()
     exit(1)
