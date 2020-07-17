@@ -19,7 +19,7 @@ new_image = None
 flight_data = None
 log_data = None
 buttons = None
-speed = 30
+speed = 50
 throttle = 0.0
 yaw = 0.0
 pitch = 0.0
@@ -27,7 +27,7 @@ roll = 0.0
 
 date_fmt = '%Y-%m-%d_%H%M%S'
 filename = '%s/Pictures/tello-%s.avi' % (os.getenv('HOME'), datetime.datetime.now().strftime(date_fmt))
-out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 30, (960, 720))
+out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 25, (960, 720))
 
 controls = {
     'w': 'forward',
@@ -92,6 +92,7 @@ def handle_input_event(drone, e):
             drone.set_pitch(0)
             drone.set_yaw(0)
             drone.set_throttle(0)
+            print("PANIC!")
             # drone.quit()
             # exit(0)
         if keyname in controls:
@@ -188,8 +189,7 @@ def main():
 
     try:
         while True:
-            # loop with pygame.event.get() is too much tight w/o some sleep
-            pygame.time.delay(100)
+            pygame.time.delay(50)
             for e in pygame.event.get():
                 handle_input_event(drone, e)
             if current_image is not new_image:
