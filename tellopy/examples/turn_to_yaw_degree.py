@@ -55,7 +55,7 @@ class Waypoint:
         return self.dy
 
     def arrived(self):
-        return self.at_w and self.at_x and self.at_y
+        return self.at_w
 
 def update(old, new, max_delta=0.3):
     if abs(old - new) <= max_delta:
@@ -88,21 +88,19 @@ def test():
         drone.takeoff()
         sleep(5)
 
-        offset_x = drone.log_data.mvo.pos_x
-        offset_y = drone.log_data.mvo.pos_y
-
         waypoints = [
-            Waypoint(0.0, 0.0, 0.0, 0.0),
-            Waypoint(0.0, 0.0, 4.0, 0.0),
-            Waypoint(0.0, 4.0, 4.0, 0.0),
-            Waypoint(0.0, 4.0, 0.0, 0.0),
+            Waypoint(-10.0, 0.0, 0.0, 0.0),
+            Waypoint(-80.0, 0.0, 0.0, 0.0),
+            Waypoint(-150.0, 0.0, 4.0, 0.0),
+            Waypoint(140.0, 4.0, 4.0, 0.0),
+            Waypoint(70.0, 4.0, 0.0, 0.0),
             Waypoint(0.0, 0.0, 0.0, 0.0),
         ]
 
         wp = waypoints.pop()
 
         while True:
-            # direction = ""
+            direction = ""
             current_yaw = drone.log_data.imu.yaw
             yaw_delta = wp.get_yaw_delta(current_yaw)
             yaw_speed = wp.get_yaw_speed()
@@ -113,51 +111,14 @@ def test():
             elif (yaw_delta < 0.0):
                 direction = "turning CCW, delta "
                 drone.counter_clockwise(yaw_speed)
-            # print(direction + str(yaw_delta) + " at " + str(yaw_speed) + " cm/s from " + str(current_yaw) + " to " + str(wp.tgt_w))
+
+            print(direction + str(yaw_delta) + " at " + str(yaw_speed) + " cm/s from " + str(current_yaw) + " to " + str(wp.tgt_w))
+
             if (math.isclose(0.0, yaw_delta, abs_tol=1.0)):
                 # close enough for government work!
                 print("at yaw")
                 drone.set_yaw(0.0)
                 wp.at_w = True
-
-            adj_x = drone.log_data.mvo.pos_x - offset_x
-            adj_y = drone.log_data.mvo.pos_y - offset_y
-            # print(adj_x, adj_y)
-
-            # dx = wp.get_dx(adj_x)
-            # dy = wp.get_dy(adj_y)
-            dx, dy = wp.get_dx_dy(current_yaw, adj_x, adj_y)
-            print(dx, dy)
-
-            if (dx <= 0.1 and dx >= -0.1):
-                drone.set_roll(0.0)
-                print("at X")
-                wp.at_x = True
-            elif (dx >= 3.0):
-                drone.set_roll(1.0)
-            elif (dx <= 3.0):
-                drone.set_roll(-1.0)
-            elif (dx > 0.3):
-                drone.set_roll(0.5)
-            elif (dx < 0.3):
-                drone.set_roll(-0.5)
-
-            if (dy <= 0.1 and dy >= -0.1):
-                drone.set_pitch(0.0)
-                print("at Y")
-                wp.at_y = True
-            elif (dy >= 3.0):
-                print("fast fwd")
-                drone.set_pitch(1.0)
-            elif (dy <= 3.0):
-                print("fast back")
-                drone.set_pitch(-1.0)
-            elif (dy > 0.3):
-                print("slow fwd")
-                drone.set_pitch(0.5)
-            elif (dy < 0.3):
-                print("slow back")
-                drone.set_pitch(-0.5)
 
             if (wp.arrived()):
                 print("arrived!")
@@ -165,7 +126,8 @@ def test():
                 drone.set_pitch(0.0)
                 drone.set_yaw(0.0)
                 drone.set_throttle(0.0)
-                sleep(1.0)
+                drone.take_picture()
+                sleep(5.0)
                 if (len(waypoints) == 0):
                     break
                 else:
@@ -173,9 +135,7 @@ def test():
 
             sleep(0.1)
 
-        sleep(2)
         drone.land()
-        sleep(5)
     except Exception as ex:
         print(ex)
     finally:
