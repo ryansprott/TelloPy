@@ -30,7 +30,7 @@ offset_y = 0.0
 
 date_fmt = '%Y-%m-%d_%H%M%S'
 filename = '%s/Pictures/tello-%s.avi' % (os.getenv('HOME'), datetime.datetime.now().strftime(date_fmt))
-out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 25, (960, 720))
+out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 20, (960, 720))
 
 class JoystickDualAction:
     # d-pad
@@ -64,7 +64,7 @@ class JoystickDualAction:
     LEFT_Y_REVERSE = -1.0
     RIGHT_X_REVERSE = 1.0
     RIGHT_Y_REVERSE = -1.0
-    DEADZONE = 0.08
+    DEADZONE = 0.01
 
 class Waypoint:
     def __init__(self, tgt_x, tgt_y):
@@ -168,21 +168,23 @@ def handle_input_event(drone, e):
             print("PANIC!")
             # drone.quit()
             # exit(0)
-        if keyname in controls:
-            key_handler = controls[keyname]
-            if type(key_handler) == str:
-                getattr(drone, key_handler)(speed)
-            else:
-                key_handler(drone, speed)
+        elif keyname == 'l':
+            drone.land()
     elif e.type == pygame.locals.KEYUP:
         keyname = pygame.key.name(e.key)
         print('-' + keyname)
-        if keyname in controls:
-            key_handler = controls[keyname]
-            if type(key_handler) == str:
-                getattr(drone, key_handler)(0)
-            else:
-                key_handler(drone, 0)
+        if keyname == 't':
+            drone.takeoff()
+        elif keyname == 'p':
+            drone.take_picture()
+        elif keyname == 'f':
+            if speed <= 90:
+                speed += 5
+            print("speed up to " + str(speed))
+        elif keyname == 's'
+            if speed > 5:
+                speed -= 5
+            print("speed down to " + str(speed))
     elif e.type == pygame.locals.JOYAXISMOTION:
         # ignore small input values (Deadzone)
         if -buttons.DEADZONE <= e.value and e.value <= buttons.DEADZONE:
@@ -233,7 +235,7 @@ def handle_input_event(drone, e):
         elif e.button == buttons.LEFT:
             drone.left(speed)
         elif e.button == buttons.PANO:
-            drone.clockwise(10)
+            drone.clockwise(30)
     elif e.type == pygame.locals.JOYBUTTONUP:
         if e.button == buttons.TAKEOFF:
             if throttle != 0.0:
@@ -260,9 +262,9 @@ def handle_input_event(drone, e):
         elif e.button == buttons.PANO:
             drone.clockwise(0)
         elif e.button == buttons.TAKE_PICTURE:
-            # drone.take_picture()
-            offset_x = drone.log_data.mvo.pos_x
-            offset_y = drone.log_data.mvo.pos_y
+            drone.take_picture()
+            #offset_x = drone.log_data.mvo.pos_x
+            #offset_y = drone.log_data.mvo.pos_y
         elif e.button == buttons.SPEED_UP:
             if speed <= 90:
                 speed += 5
@@ -323,8 +325,8 @@ def recv_thread(drone):
                         time_base = frame.time_base
                     frame_skip = int((time.time() - start_time)/time_base)
             except av.AVError as ex:
-                container = av.open(drone.get_video_stream())
-                print("resetting container. exception while decoding! " + ex)
+                # container = av.open(drone.get_video_stream())
+                print("exception while decoding! " + ex)
                 continue
 
     except Exception as ex:
@@ -349,7 +351,7 @@ def main():
     except pygame.error:
         pass
 
-    wp = Waypoint(1.0, 1.0)
+    wp = Waypoint(4.0, 4.0)
     drone = tellopy.Tello()
     drone.record_log_data()
     drone.connect()
@@ -362,13 +364,13 @@ def main():
     try:
         while True:
             pygame.time.delay(50)
-            current_yaw = drone.log_data.imu.yaw
-            adj_x = drone.log_data.mvo.pos_x - offset_x
-            adj_y = drone.log_data.mvo.pos_y - offset_y
-            dx = wp.get_dx(adj_x)
-            dy = wp.get_dy(adj_y)
+            # current_yaw = drone.log_data.imu.yaw
+            # adj_x = drone.log_data.mvo.pos_x - offset_x
+            # adj_y = drone.log_data.mvo.pos_y - offset_y
+            # dx = wp.get_dx(adj_x)
+            # dy = wp.get_dy(adj_y)
             # dx, dy = wp.get_dx_dy(current_yaw, adj_x, adj_y)
-            print(dx, dy)
+            # print(dx, dy)
 
             for e in pygame.event.get():
                 handle_input_event(drone, e)
