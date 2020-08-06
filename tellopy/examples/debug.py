@@ -30,7 +30,7 @@ offset_y = 0.0
 
 date_fmt = '%Y-%m-%d_%H%M%S'
 filename = '%s/Pictures/tello-%s.avi' % (os.getenv('HOME'), datetime.datetime.now().strftime(date_fmt))
-out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 20, (960, 720))
+out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc('M','J','P','G'), 15, (960, 720))
 
 class JoystickDualAction:
     # d-pad
@@ -42,8 +42,8 @@ class JoystickDualAction:
     # bumper triggers
     LAND = 4  # L1
     TAKEOFF = 5  # R1
-    PANO = 6 #L2
-    TAKE_PICTURE = 7 #R2
+    PANO_L = 6 #L2
+    PANO_R = 7 #R2
 
     # buttons
     LEFT = 0  # X
@@ -92,30 +92,6 @@ class Waypoint:
 
     def arrived(self):
         return self.at_x and self.at_y
-
-controls = {
-    'w': 'forward',
-    's': 'backward',
-    'a': 'left',
-    'd': 'right',
-    'space': 'up',
-    'left shift': 'down',
-    'right shift': 'down',
-    'q': 'counter_clockwise',
-    'e': 'clockwise',
-    # arrow keys for fast turns and altitude adjustments
-    'left': lambda drone, speed: drone.counter_clockwise(speed*2),
-    'right': lambda drone, speed: drone.clockwise(speed*2),
-    'up': lambda drone, speed: drone.up(speed*2),
-    'down': lambda drone, speed: drone.down(speed*2),
-    'tab': lambda drone, speed: drone.takeoff(),
-    'backspace': lambda drone, speed: drone.land(),
-    # 'p': palm_land,
-    # 'r': toggle_recording,
-    # 'z': toggle_zoom,
-    'enter': lambda drone: drone.take_picture(),
-    'return': lambda drone: drone.take_picture(),
-}
 
 def update(old, new, max_delta=0.3):
     if abs(old - new) <= max_delta:
@@ -181,7 +157,7 @@ def handle_input_event(drone, e):
             if speed <= 90:
                 speed += 5
             print("speed up to " + str(speed))
-        elif keyname == 's'
+        elif keyname == 's':
             if speed > 5:
                 speed -= 5
             print("speed down to " + str(speed))
@@ -234,7 +210,9 @@ def handle_input_event(drone, e):
             drone.right(speed)
         elif e.button == buttons.LEFT:
             drone.left(speed)
-        elif e.button == buttons.PANO:
+        elif e.button == buttons.PANO_L:
+            drone.counter_clockwise(30)
+        elif e.button == buttons.PANO_R:
             drone.clockwise(30)
     elif e.type == pygame.locals.JOYBUTTONUP:
         if e.button == buttons.TAKEOFF:
@@ -259,10 +237,10 @@ def handle_input_event(drone, e):
             drone.right(0)
         elif e.button == buttons.LEFT:
             drone.left(0)
-        elif e.button == buttons.PANO:
+        elif e.button == buttons.PANO_L:
+            drone.counter_clockwise(0)
+        elif e.button == buttons.PANO_R:
             drone.clockwise(0)
-        elif e.button == buttons.TAKE_PICTURE:
-            drone.take_picture()
             #offset_x = drone.log_data.mvo.pos_x
             #offset_y = drone.log_data.mvo.pos_y
         elif e.button == buttons.SPEED_UP:
