@@ -20,7 +20,7 @@ new_image = None
 flight_data = None
 log_data = None
 buttons = None
-speed = 50
+speed = 30
 throttle = 0.0
 yaw = 0.0
 pitch = 0.0
@@ -40,7 +40,7 @@ class JoystickDualAction:
     ROTATE_RIGHT = -1  # RIGHT
 
     # bumper triggers
-    LAND = 4  # L1
+    TAKE_PICTURE = 4  # L1
     TAKEOFF = 5  # R1
     PANO_L = 6 #L2
     PANO_R = 7 #R2
@@ -64,7 +64,7 @@ class JoystickDualAction:
     LEFT_Y_REVERSE = -1.0
     RIGHT_X_REVERSE = 1.0
     RIGHT_Y_REVERSE = -1.0
-    DEADZONE = 0.01
+    DEADZONE = 0.2
 
 class Waypoint:
     def __init__(self, tgt_x, tgt_y):
@@ -192,8 +192,8 @@ def handle_input_event(drone, e):
         if e.value[1] > 0:
             drone.up(speed)
     elif e.type == pygame.locals.JOYBUTTONDOWN:
-        if e.button == buttons.LAND:
-            drone.land()
+        if e.button == buttons.TAKE_PICTURE:
+            drone.take_picture()
         elif e.button == buttons.UP:
             drone.up(speed)
         elif e.button == buttons.DOWN:
@@ -211,9 +211,9 @@ def handle_input_event(drone, e):
         elif e.button == buttons.LEFT:
             drone.left(speed)
         elif e.button == buttons.PANO_L:
-            drone.counter_clockwise(30)
+            drone.counter_clockwise(10)
         elif e.button == buttons.PANO_R:
-            drone.clockwise(30)
+            drone.clockwise(10)
     elif e.type == pygame.locals.JOYBUTTONUP:
         if e.button == buttons.TAKEOFF:
             if throttle != 0.0:
