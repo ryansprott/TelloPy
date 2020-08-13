@@ -192,9 +192,7 @@ def handle_input_event(drone, e):
         if e.value[1] > 0:
             drone.up(speed)
     elif e.type == pygame.locals.JOYBUTTONDOWN:
-        if e.button == buttons.TAKE_PICTURE:
-            drone.take_picture()
-        elif e.button == buttons.UP:
+        if e.button == buttons.UP:
             drone.up(speed)
         elif e.button == buttons.DOWN:
             drone.down(speed)
@@ -221,6 +219,8 @@ def handle_input_event(drone, e):
                 print('### throttle != 0.0 (This may hinder the drone from taking off)')
                 print('###')
             drone.takeoff()
+        if e.button == buttons.TAKE_PICTURE:
+            drone.take_picture()
         elif e.button == buttons.UP:
             drone.up(0)
         elif e.button == buttons.DOWN:
